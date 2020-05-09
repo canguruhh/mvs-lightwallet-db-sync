@@ -24,7 +24,7 @@ let lastBlockHash: string
 
     console.log('indexes created')
 
-    let number = (await BlockModel.findOne().sort({ number: -1 }))?.number || 0
+    let number = (await BlockModel.findOne().sort({ number: -1 }))?.number+1 || 0
     if (number && REMOVE_BEST_BLOCK) {
         console.log('remove best block to make sure the data is clean')
         applyFork(number)
