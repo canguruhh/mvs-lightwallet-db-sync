@@ -14,7 +14,7 @@
     "lodash": "^4.17.15",
     "metaverse-ts": "^0.1.5",
     "mongoose": "^5.9.12",
-    "mvsd": "^0.9.1-5"
+    "mvsd": "^0.9.1-6"
   },
   "devDependencies": {
     "@types/mongoose": "^5.7.15",

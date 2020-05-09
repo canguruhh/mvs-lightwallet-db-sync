@@ -1,6 +1,6 @@
 import { connect, disconnect, } from 'mongoose'
 import { BlockModel, } from './model/block'
-import { MvsdJSONRPC } from '../../metaverse-rpc-js'
+import { MvsdJSONRPC } from 'mvsd'
 import { TransactionModel } from './model/transaction'
 import { Block, Transaction } from 'metaverse-ts'
 import { flatten, uniq, compact } from 'lodash'
