@@ -1,4 +1,4 @@
-import { connect, disconnect, } from 'mongoose'
+import { connect, disconnect, startSession, ClientSession } from 'mongoose'
 import { BlockModel, } from './model/block'
 import { MvsdJSONRPC } from 'mvsd'
 import { TransactionModel } from './model/transaction'
@@ -7,6 +7,9 @@ import { flatten, uniq, compact } from 'lodash'
 
 const MONGODB_URL = process.env.MONGODB_URL
 const MVSD_URL = process.env.MVSD_URL
+
+// optionally enable the removal of the latest block
+const REMOVE_BEST_BLOCK = process.env.REMOVE_BEST_BLOCK
 
 const rpc = new MvsdJSONRPC(MVSD_URL)
 let lastBlockHash: string
@@ -21,8 +24,8 @@ let lastBlockHash: string
 
     console.log('indexes created')
 
-    let number = (await BlockModel.findOne().sort({number: -1}))?.number || 0
-    if(number){
+    let number = (await BlockModel.findOne().sort({ number: -1 }))?.number || 0
+    if (number && REMOVE_BEST_BLOCK) {
         console.log('remove best block to make sure the data is clean')
         applyFork(number)
     }
@@ -38,9 +41,9 @@ let lastBlockHash: string
     await disconnect()
 })()
 
-function sleep(millis: number){
-    return new Promise(resolve=>{
-        setTimeout(()=>resolve(), millis)
+function sleep(millis: number) {
+    return new Promise(resolve => {
+        setTimeout(() => resolve(), millis)
     })
 }
 
@@ -80,27 +83,26 @@ async function syncBlock(number: number) {
     const transactions = mvsdBlockData.transactions.map((tx, i) => prepareTransaction(decodedBlock.transactions[i], tx, decodedBlock.header.number))
 
     // write to database
-    await storeTransactions(transactions)
-    await storeBlock(block)
+    const session = await startSession()
+    await session.startTransaction()
+    await storeTransactions(transactions, session)
+    await storeBlock(block, session)
+    await session.commitTransaction()
+
 
     lastBlockHash = block.hash.toString()
 
     return number + 1
 }
 
-async function storeBlock(block: any) {
-    const oldBlock = await BlockModel.findOneAndUpdate({ hash: block.hash }, block, { upsert: true, })
-    if (oldBlock) {
-        console.log('updated block', oldBlock.toObject().hash)
-    } else {
-        console.log('inserted block', block.hash)
-    }
+async function storeBlock(block: any, session: ClientSession) {
+    await BlockModel.insertMany([block], { session })
+    console.log('inserted block', block.hash)
 }
 
-async function storeTransactions(transactions: any[]) {
-    const deletedTxs = await TransactionModel.deleteMany({ txid: { $in: transactions.map(tx => tx.txid) } })
-    const insertedTxs = await TransactionModel.insertMany(transactions)
-    console.log(`added ${insertedTxs.length - deletedTxs.deletedCount} transactions. updated ${deletedTxs.deletedCount}`)
+async function storeTransactions(transactions: any[], session: ClientSession) {
+    const insertedTxs = await TransactionModel.insertMany(transactions, { session })
+    console.log(`added ${insertedTxs.length} transactions`)
 }
 
 function prepareBlock(blockData: Block, encodedBlock: string) {
