@@ -11,7 +11,7 @@
   "license": "MIT",
   "dependencies": {
     "@types/lodash": "^4.14.150",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "metaverse-ts": "^0.1.5",
     "mongoose": "^5.9.12",
     "mvsd": "^0.9.1-6"
